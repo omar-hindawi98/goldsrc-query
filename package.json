@@ -1,12 +1,41 @@
 {
-  "name": "untitled",
+  "name": "goldsrc-query",
   "version": "1.0.0",
-  "description": "",
-  "main": "query.js",
+  "description": "Query library for GoldSrc servers using the A2S UDP query protocol and RCON TCP protocol",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/",
+    "src/"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run format:check && npm run build && npm test"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "keywords": [
+    "goldsrc",
+    "half-life",
+    "counter-strike",
+    "valve",
+    "server-query",
+    "a2s",
+    "rcon",
+    "gameserver"
+  ],
+  "author": "Omar Hindawi",
+  "license": "ISC",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "prettier": "^3.9.6",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
 }
