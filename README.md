@@ -46,7 +46,7 @@ A Promise-based Node.js library for querying GoldSrc game servers (Half-Life, Co
 npm install goldsrc-query
 ```
 
-**Requirements:** Node.js `>=18.0.0`
+**Requirements:** Node.js `>=20.12.0`
 
 ---
 
