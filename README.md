@@ -1,10 +1,9 @@
 # goldsrc-query
 
 [![npm version](https://img.shields.io/npm/v/goldsrc-query)](https://www.npmjs.com/package/goldsrc-query)
-[![npm downloads](https://img.shields.io/npm/dm/goldsrc-query)](https://www.npmjs.com/package/goldsrc-query)
 [![license](https://img.shields.io/npm/l/goldsrc-query)](LICENSE)
-[![node](https://img.shields.io/node/v/goldsrc-query)](https://nodejs.org)
-[![build](https://img.shields.io/github/actions/workflow/status/omar-hindawi98/goldsrc-query/ci.yml)](https://github.com/omar-hindawi98/goldsrc-query/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/omar-hindawi98/goldsrc-query/ci.yml?branch=main&label=CI)](https://github.com/omar-hindawi98/goldsrc-query/actions/workflows/ci.yml)
+[![E2E](https://img.shields.io/github/actions/workflow/status/omar-hindawi98/goldsrc-query/e2e.yml?branch=main&label=E2E)](https://github.com/omar-hindawi98/goldsrc-query/actions/workflows/e2e.yml)
 
 A Promise-based Node.js library for querying GoldSrc game servers (Half-Life, Counter-Strike 1.6, etc.) over UDP using the A2S protocol, with full RCON support over TCP.
 
@@ -261,8 +260,8 @@ npm run dev          # compile in watch mode
 npm test             # run all tests
 npm run test:watch   # run tests in watch mode
 npm run test:e2e     # run e2e tests (requires Docker, x86-64 host only)
-npm run format       # format source with Prettier
-npm run format:check # check formatting (runs in prepublishOnly)
+npm run check        # lint + format (auto-fix)
+npm run check:ci     # lint + format check (no writes, runs in CI)
 ```
 
 > **Note:** E2E tests require Docker and an x86-64 host — HLDS does not run under QEMU emulation on Apple Silicon. E2E tests run automatically in CI on every push.

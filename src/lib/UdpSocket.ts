@@ -18,6 +18,10 @@ export class UdpSocket {
 
 	private socket?: dgram.Socket;
 	private challenge: Buffer | null = null;
+	private challengeExpiry = 0;
+	private static readonly CHALLENGE_TTL_MS = 5 * 60 * 1000;
+	private static readonly MAX_SPLIT_PACKETS = 16;
+	private static readonly MAX_SPLIT_PACKET_ID = 0xffff;
 
 	constructor(
 		address: string,
@@ -32,6 +36,7 @@ export class UdpSocket {
 	}
 
 	open(): void {
+		if (this.socket) return;
 		if (this.verbose) console.log("UDP socket created");
 		this.socket = dgram.createSocket("udp4");
 		this.socket.on("error", (err) => {
@@ -41,6 +46,9 @@ export class UdpSocket {
 
 	close(): void {
 		this.socket?.close();
+		this.socket = undefined;
+		this.challenge = null;
+		this.challengeExpiry = 0;
 	}
 
 	private ensureOpen(): void {
@@ -96,7 +104,9 @@ export class UdpSocket {
 	}
 
 	private async withChallenge(): Promise<Buffer> {
-		if (this.challenge !== null) return this.challenge;
+		if (this.challenge !== null && Date.now() < this.challengeExpiry) {
+			return this.challenge;
+		}
 
 		if (this.verbose) console.log("QUERY - CHALLENGE");
 		this.send(UDP_PACKET.A2S_PLAYER_CHALLENGE);
@@ -110,6 +120,7 @@ export class UdpSocket {
 				return bytes;
 			},
 		);
+		this.challengeExpiry = Date.now() + UdpSocket.CHALLENGE_TTL_MS;
 		return this.challenge;
 	}
 
@@ -140,6 +151,17 @@ export class UdpSocket {
 			const id = msg.readInt32LE(4);
 			const total = msg[8];
 			const number = msg[9];
+
+			if (
+				id < 0 ||
+				id > UdpSocket.MAX_SPLIT_PACKET_ID ||
+				total < 1 ||
+				total > UdpSocket.MAX_SPLIT_PACKETS ||
+				number >= total
+			) {
+				return null;
+			}
+
 			// Byte 10-11 is packet size (unused — we just concatenate in order).
 			const payload = msg.slice(12);
 
@@ -194,6 +216,7 @@ export class UdpSocket {
 				}
 			};
 
+			this.socket?.setMaxListeners(0);
 			this.socket?.on("message", onMessage);
 		});
 	}

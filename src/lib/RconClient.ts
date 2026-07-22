@@ -188,6 +188,8 @@ export class RconClient {
 		packet.writeUInt8(0, 12 + text.length);
 		packet.writeUInt8(0, 12 + text.length + 1);
 
-		return [packet, this.idSequence++];
+		const id = this.idSequence;
+		this.idSequence = (this.idSequence + 1) & 0x7fffffff;
+		return [packet, id];
 	}
 }
