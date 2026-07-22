@@ -22,8 +22,7 @@ jobs:
             - run: npm run build
 
             - name: Start HLDS
-              run: docker compose up -d --wait
-              timeout-minutes: 5
+              run: docker compose up -d
 
             - name: Run E2E tests
               run: npm run test:e2e
