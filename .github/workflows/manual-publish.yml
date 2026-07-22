@@ -1,7 +1,9 @@
 name: Manual Publish
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - temp/manual-publish
 
 jobs:
   publish:
