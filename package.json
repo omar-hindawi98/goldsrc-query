@@ -15,6 +15,7 @@
     "format:check": "prettier --check \"src/**/*.ts\"",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "prepublishOnly": "npm run format:check && npm run build && npm test"
   },
   "keywords": [
