@@ -1,6 +1,6 @@
 {
   "name": "goldsrc-query",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Query library for GoldSrc servers using the A2S UDP query protocol and RCON TCP protocol",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
