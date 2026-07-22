@@ -1,2 +1,8 @@
-export { Query } from './Query';
-export type { ServerInfo, PlayerInfo, RulesInfo, RconMessage, ModInfo } from './types';
+export { Query } from "./Query";
+export type {
+	ModInfo,
+	PlayerInfo,
+	RconMessage,
+	RulesInfo,
+	ServerInfo,
+} from "./types";

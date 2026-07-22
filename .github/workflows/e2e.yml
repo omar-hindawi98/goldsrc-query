@@ -1,43 +1,40 @@
 name: E2E
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
 
 jobs:
-  e2e:
-    runs-on: ubuntu-latest
+    e2e:
+        runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v7
+        steps:
+            - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22.x
-          cache: npm
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: 22
+                  cache: npm
 
-      - run: npm ci
-      - run: npm run build
+            - run: npm ci
+            - run: npm run build
 
-      - name: Cache Docker layers
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-hlds-${{ hashFiles('docker/hlds/Dockerfile') }}
-          restore-keys: ${{ runner.os }}-hlds-
+            - name: Start HLDS
+              run: docker compose up -d
 
-      - name: Build and start HLDS
-        run: docker compose up -d --build
+            - name: Run E2E tests
+              run: npm run test:e2e
+              env:
+                  E2E_HOST: 127.0.0.1
+                  E2E_PORT: 27015
+                  E2E_RCON_PASSWORD: e2e_test_password
 
-      - name: Run E2E tests
-        run: npm run test:e2e
-        env:
-          E2E_HOST: 127.0.0.1
-          E2E_PORT: 27015
-          E2E_RCON_PASSWORD: e2e_test_password
+            - name: Dump HLDS logs on failure
+              if: failure()
+              run: docker compose logs hlds
 
-      - name: Stop HLDS
-        if: always()
-        run: docker compose down
+            - name: Stop HLDS
+              if: always()
+              run: docker compose down
