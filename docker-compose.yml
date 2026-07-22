@@ -1,6 +1,8 @@
 services:
   hlds:
-    build: ./docker/hlds
+    image: jives/hlds:cstrike
+    platform: linux/amd64
     ports:
       - "27015:27015/udp"
       - "27015:27015/tcp"
+    command: "+map de_dust2 +maxplayers 12 +rcon_password e2e_test_password +sv_password ''"
