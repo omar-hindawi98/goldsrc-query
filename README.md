@@ -260,6 +260,9 @@ npm run build        # compile TypeScript to dist/
 npm run dev          # compile in watch mode
 npm test             # run all tests
 npm run test:watch   # run tests in watch mode
+npm run test:e2e     # run e2e tests (requires Docker, x86-64 host only)
 npm run format       # format source with Prettier
 npm run format:check # check formatting (runs in prepublishOnly)
 ```
+
+> **Note:** E2E tests require Docker and an x86-64 host — HLDS does not run under QEMU emulation on Apple Silicon. E2E tests run automatically in CI on every push.
