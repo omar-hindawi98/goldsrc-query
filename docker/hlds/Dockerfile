@@ -24,6 +24,10 @@ RUN "$STEAMCMD_DIR/steamcmd.sh" \
         +app_update 90 validate \
         +quit
 
+# Symlink steamclient.so where HLDS expects it
+RUN mkdir -p /root/.steam/sdk32 \
+    && ln -s "$HLDS_DIR/steamclient.so" /root/.steam/sdk32/steamclient.so
+
 COPY start.sh /start.sh
 RUN chmod +x /start.sh
 
@@ -39,4 +43,5 @@ CMD ["-game", "cstrike", \
      "+rcon_password", "e2e_test_password", \
      "+sv_password", "", \
      "-nomaster", \
-     "-insecure"]
+     "-insecure", \
+     "-nosteam"]
