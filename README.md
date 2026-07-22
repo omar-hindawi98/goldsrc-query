@@ -2,6 +2,7 @@
 
 [![npm version](https://img.shields.io/npm/v/goldsrc-query)](https://www.npmjs.com/package/goldsrc-query)
 [![license](https://img.shields.io/npm/l/goldsrc-query)](LICENSE)
+[![node](https://img.shields.io/node/v/goldsrc-query)](https://nodejs.org)
 [![CI](https://img.shields.io/github/actions/workflow/status/omar-hindawi98/goldsrc-query/ci.yml?branch=main&label=CI)](https://github.com/omar-hindawi98/goldsrc-query/actions/workflows/ci.yml)
 [![E2E](https://img.shields.io/github/actions/workflow/status/omar-hindawi98/goldsrc-query/e2e.yml?branch=main&label=E2E)](https://github.com/omar-hindawi98/goldsrc-query/actions/workflows/e2e.yml)
 
