@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { BufferExt } from '../lib/BufferExt';
 import { parseRules } from './rules';
-import { buildPacket, writeShort, writeString } from '../tests/packetHelpers';
+import { buildPacket, writeShort, writeString } from '../../tests/packetHelpers';
 
 describe('parseRules', () => {
     it('returns zero rules when total is 0', () => {

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { BufferExt } from '../lib/BufferExt';
 import { parsePlayers } from './players';
-import { buildPacket, writeByte, writeLong, writeFloat, writeString } from '../tests/packetHelpers';
+import { buildPacket, writeByte, writeLong, writeFloat, writeString } from '../../tests/packetHelpers';
 
 describe('parsePlayers', () => {
     it('returns an empty array when player count is 0', () => {

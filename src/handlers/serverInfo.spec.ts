@@ -7,7 +7,7 @@ import {
     writeLong,
     writeBigUInt64LE,
     writeString,
-} from '../tests/packetHelpers';
+} from '../../tests/packetHelpers';
 
 describe('parseServerInfo', () => {
     function makePacket(mod = 0) {
