@@ -6,3 +6,9 @@ services:
       - "27015:27015/udp"
       - "27015:27015/tcp"
     command: "+map de_dust2 +maxplayers 12 +rcon_password e2e_test_password +sv_password ''"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/127.0.0.1/27015"]
+      interval: 5s
+      timeout: 3s
+      retries: 40
+      start_period: 15s

@@ -5,7 +5,7 @@ const HOST = process.env.E2E_HOST ?? '127.0.0.1';
 const PORT = Number(process.env.E2E_PORT ?? 27015);
 const RCON_PASSWORD = process.env.E2E_RCON_PASSWORD ?? 'e2e_test_password';
 
-async function waitForServer(host: string, port: number, retries = 40, interval = 5000): Promise<void> {
+async function waitForServer(host: string, port: number, retries = 10, interval = 2000): Promise<void> {
     for (let i = 1; i <= retries; i++) {
         const q = new Query(host, port, 2000);
         try {
