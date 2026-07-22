@@ -3,6 +3,6 @@ set -e
 
 cd "$HLDS_DIR"
 
-# Call hlds_linux directly — bypasses hlds_run's steamcmd update check on
-# every startup, which would add several minutes before the server is ready.
+export LD_LIBRARY_PATH="$HLDS_DIR:$LD_LIBRARY_PATH"
+
 exec ./hlds_linux -console "$@"
