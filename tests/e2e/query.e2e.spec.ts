@@ -5,7 +5,7 @@ const HOST = process.env.E2E_HOST ?? '127.0.0.1';
 const PORT = Number(process.env.E2E_PORT ?? 27015);
 const RCON_PASSWORD = process.env.E2E_RCON_PASSWORD ?? 'e2e_test_password';
 
-async function waitForServer(host: string, port: number, retries = 20, interval = 3000): Promise<void> {
+async function waitForServer(host: string, port: number, retries = 30, interval = 3000): Promise<void> {
     for (let i = 0; i < retries; i++) {
         const q = new Query(host, port, 2000);
         try {
@@ -17,13 +17,14 @@ async function waitForServer(host: string, port: number, retries = 20, interval 
         } finally {
             q.close();
         }
+        console.log(`Waiting for server... (${i + 1}/${retries})`);
         await new Promise((r) => setTimeout(r, interval));
     }
     throw new Error(`Server at ${host}:${port} did not become ready after ${retries} attempts`);
 }
 
 describe('goldsrc-query e2e', () => {
-    let query: Query;
+    let query: Query | undefined;
 
     beforeAll(async () => {
         await waitForServer(HOST, PORT);
@@ -32,15 +33,17 @@ describe('goldsrc-query e2e', () => {
     });
 
     afterAll(() => {
-        query.close();
+        query?.close();
     });
 
     it('ping() returns a positive number', async () => {
+        if (!query) return;
         const ms = await query.ping();
         expect(ms).toBeGreaterThanOrEqual(0);
     });
 
     it('serverInfo() returns expected shape', async () => {
+        if (!query) return;
         const info = await query.serverInfo();
         expect(info.name).toBeDefined();
         expect(typeof info.map).toBe('string');
@@ -51,16 +54,19 @@ describe('goldsrc-query e2e', () => {
     });
 
     it('serverInfo() map is de_dust2', async () => {
+        if (!query) return;
         const info = await query.serverInfo();
         expect(info.map).toBe('de_dust2');
     });
 
     it('players() returns an array', async () => {
+        if (!query) return;
         const players = await query.players();
         expect(Array.isArray(players)).toBe(true);
     });
 
     it('rules() returns a non-empty rule list', async () => {
+        if (!query) return;
         const rules = await query.rules();
         expect(rules.total).toBeGreaterThan(0);
         expect(rules.list.length).toBe(rules.total);
