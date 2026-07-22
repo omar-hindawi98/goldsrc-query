@@ -1,12 +1,6 @@
 services:
   hlds:
-    image: cm2network/hlds:cstrike
+    build: ./docker/hlds
     ports:
       - "27015:27015/udp"
       - "27015:27015/tcp"
-    environment:
-      GAME: cstrike
-      MAP: de_dust2
-      MAXPLAYERS: 12
-      RCON_PASSWORD: e2e_test_password
-      SV_PASSWORD: ""

@@ -21,8 +21,15 @@ jobs:
       - run: npm ci
       - run: npm run build
 
-      - name: Start HLDS
-        run: docker compose up -d
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-hlds-${{ hashFiles('docker/hlds/Dockerfile') }}
+          restore-keys: ${{ runner.os }}-hlds-
+
+      - name: Build and start HLDS
+        run: docker compose up -d --build
 
       - name: Run E2E tests
         run: npm run test:e2e
