@@ -24,12 +24,15 @@ RUN "$STEAMCMD_DIR/steamcmd.sh" \
         +app_update 90 validate \
         +quit
 
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+
 WORKDIR $HLDS_DIR
 
 EXPOSE 27015/udp
 EXPOSE 27015/tcp
 
-ENTRYPOINT ["./hlds_run"]
+ENTRYPOINT ["/start.sh"]
 CMD ["-game", "cstrike", \
      "+map", "de_dust2", \
      "+maxplayers", "12", \

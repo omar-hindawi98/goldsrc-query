@@ -38,6 +38,10 @@ jobs:
           E2E_PORT: 27015
           E2E_RCON_PASSWORD: e2e_test_password
 
+      - name: Dump HLDS logs on failure
+        if: failure()
+        run: docker compose logs hlds
+
       - name: Stop HLDS
         if: always()
         run: docker compose down
