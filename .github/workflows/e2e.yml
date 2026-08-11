@@ -34,14 +34,14 @@ jobs:
           for i in {1..60}; do
             echo "Waiting... ${i}/60"
 
-            if docker compose logs hlds 2>&1 | grep -q 'World triggered "Round_Start"'; then
+            if docker compose logs cstrike 2>&1 | grep -q 'World triggered "Round_Start"'; then
               echo "HLDS is ready!"
               exit 0
             fi
 
             if ! docker compose ps --status running --quiet hlds | grep -q .; then
               echo "HLDS container stopped unexpectedly."
-              docker compose logs hlds
+              docker compose logs cstrike
               exit 1
             fi
 
@@ -49,7 +49,7 @@ jobs:
           done
 
           echo "Timed out waiting for HLDS."
-          docker compose logs hlds
+          docker compose logs cstrike
           exit 1
 
       - name: Run E2E tests
@@ -61,7 +61,7 @@ jobs:
 
       - name: Dump HLDS logs on failure
         if: failure()
-        run: docker compose logs hlds
+        run: docker compose logs cstrike
 
       - name: Stop HLDS
         if: always()
