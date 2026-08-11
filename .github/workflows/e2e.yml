@@ -1,40 +1,68 @@
 name: E2E
 
 on:
-    push:
-        branches: [main]
-    pull_request:
-        branches: [main]
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
-    e2e:
-        runs-on: ubuntu-latest
+  e2e:
+    runs-on: ubuntu-latest
 
-        steps:
-            - uses: actions/checkout@v7
+    steps:
+      - uses: actions/checkout@v7
 
-            - uses: actions/setup-node@v7
-              with:
-                  node-version: 22
-                  cache: npm
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
 
-            - run: npm ci
-            - run: npm run build
+      - run: npm ci
+      - run: npm run build
 
-            - name: Start HLDS
-              run: docker compose up -d
+      - name: Start HLDS
+        run: docker compose up -d
 
-            - name: Run E2E tests
-              run: npm run test:e2e
-              env:
-                  E2E_HOST: 127.0.0.1
-                  E2E_PORT: 27015
-                  E2E_RCON_PASSWORD: e2e_test_password
+      - name: Wait for HLDS to be ready
+        shell: bash
+        run: |
+          set -e
 
-            - name: Dump HLDS logs on failure
-              if: failure()
-              run: docker compose logs hlds
+          echo "Waiting for HLDS to start..."
 
-            - name: Stop HLDS
-              if: always()
-              run: docker compose down
+          for i in {1..60}; do
+            echo "Waiting... ${i}/60"
+
+            if docker compose logs hlds 2>&1 | grep -q 'World triggered "Round_Start"'; then
+              echo "HLDS is ready!"
+              exit 0
+            fi
+
+            if ! docker compose ps --status running --quiet hlds | grep -q .; then
+              echo "HLDS container stopped unexpectedly."
+              docker compose logs hlds
+              exit 1
+            fi
+
+            sleep 2
+          done
+
+          echo "Timed out waiting for HLDS."
+          docker compose logs hlds
+          exit 1
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+        env:
+          E2E_HOST: 127.0.0.1
+          E2E_PORT: 27015
+          E2E_RCON_PASSWORD: e2e_test_password
+
+      - name: Dump HLDS logs on failure
+        if: failure()
+        run: docker compose logs hlds
+
+      - name: Stop HLDS
+        if: always()
+        run: docker compose down
