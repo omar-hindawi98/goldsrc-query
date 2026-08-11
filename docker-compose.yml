@@ -6,10 +6,11 @@ services:
     environment:
       - PORT=27015
       - MAP=de_dust2
-      - RCON_PASSWORD=e2e_test_password
       - MAXPLAYERS=16
       - SV_LAN=0
       - CPU_MHZ=3000
     ports:
       - 27015:27015/udp
       - 27015:27015
+    volumes:
+      - /config/server.cfg:/home/steam/cstrike/cstrike/server.cfg
