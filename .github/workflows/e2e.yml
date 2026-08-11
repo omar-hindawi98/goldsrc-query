@@ -39,7 +39,7 @@ jobs:
               exit 0
             fi
 
-            if ! docker compose ps --status running --quiet hlds | grep -q .; then
+            if ! docker compose ps --status running --quiet cstrike | grep -q .; then
               echo "HLDS container stopped unexpectedly."
               docker compose logs cstrike
               exit 1
