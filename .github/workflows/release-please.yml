@@ -10,7 +10,14 @@ permissions:
   id-token: write
 
 jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  e2e:
+    uses: ./.github/workflows/e2e.yml
+
   release-please:
+    needs: [ci, e2e]
     runs-on: ubuntu-latest
     steps:
       - uses: googleapis/release-please-action@v5
