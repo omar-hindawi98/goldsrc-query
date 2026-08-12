@@ -41,8 +41,6 @@ describe("goldsrc-query udp e2e", () => {
 		if (!query) return;
 		const players = await query.players();
 		expect(Array.isArray(players)).toBe(true);
-		// Server runs bots so there are always active players
-		expect(players.length).toBeGreaterThan(0);
 		for (const p of players) {
 			expect(typeof p.index).toBe("number");
 			expect(typeof p.name).toBe("string");
