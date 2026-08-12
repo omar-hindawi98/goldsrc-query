@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.6](https://github.com/omar-hindawi98/goldsrc-query/compare/goldsrc-query-v1.1.5...goldsrc-query-v1.1.6) (2026-08-12)
+
+
+### Bug Fixes
+
+* release flow([#23](https://github.com/omar-hindawi98/goldsrc-query/issues/23)) ([13b0953](https://github.com/omar-hindawi98/goldsrc-query/commit/13b0953d54ab789c0f86762232afd9ca98286214))
+
 ## [1.1.5](https://github.com/omar-hindawi98/goldsrc-query/compare/goldsrc-query-v1.1.4...goldsrc-query-v1.1.5) (2026-08-12)
 
 
