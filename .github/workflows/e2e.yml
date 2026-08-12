@@ -54,10 +54,6 @@ jobs:
 
       - name: Run E2E tests
         run: npm run test:e2e
-        env:
-          E2E_HOST: 127.0.0.1
-          E2E_PORT: 27015
-          E2E_RCON_PASSWORD: e2e_test_password
 
       - name: Dump HLDS logs on failure
         if: failure()

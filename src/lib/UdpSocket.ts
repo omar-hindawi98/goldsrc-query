@@ -163,11 +163,15 @@ export class UdpSocket {
 		}
 
 		if (prefix === -2) {
-			// Split-packet response header:
-			//   id(4) total(1) number(1) size(2) [compressed flag in id high-bit for Source]
+			// GoldSrc split-packet response header (9 bytes total):
+			//   prefix(4) id(4) packed(1)
+			// packed byte: upper nibble = fragment index (0-based), lower nibble = total
+			// Fragment data starts at byte 9 and includes the inner 0xFFFFFFFF prefix
+			// on the first fragment; after reassembly we recurse to strip that prefix.
 			const id = msg.readInt32LE(4);
-			const total = msg[8];
-			const number = msg[9];
+			const packed = msg[8];
+			const total = packed & 0x0f;
+			const number = (packed >> 4) & 0x0f;
 
 			if (
 				id < 0 ||
@@ -179,8 +183,7 @@ export class UdpSocket {
 				return null;
 			}
 
-			// Byte 10-11 is packet size (unused — we just concatenate in order).
-			const payload = msg.slice(12);
+			const payload = msg.slice(9);
 
 			if (!pending.has(id)) pending.set(id, new Array(total).fill(null));
 			const parts = pending.get(id) as Buffer[];
@@ -188,7 +191,9 @@ export class UdpSocket {
 			if (parts.some((p) => p === null)) return null; // still waiting for more
 
 			pending.delete(id);
-			return Buffer.concat(parts);
+			// The assembled buffer is the original response (starts with 0xFFFFFFFF).
+			// Recurse to strip that inner header and return the bare payload.
+			return this.reassemble(Buffer.concat(parts), pending);
 		}
 
 		return null;

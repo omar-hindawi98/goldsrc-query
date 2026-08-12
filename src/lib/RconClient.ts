@@ -47,7 +47,10 @@ export class RconClient {
 				const text = msg.slice(4).toString("utf8").trim();
 
 				if (text.startsWith("challenge rcon ")) {
-					this.challenge = text.slice("challenge rcon ".length).trim();
+					// Strip null bytes before trimming - GoldSrc null-terminates this string
+					// and JS trim() does not remove \0, so it would corrupt the command.
+					const raw = text.slice("challenge rcon ".length).replace(/\0/g, "").trim();
+					this.challenge = raw;
 					clearTimeout(timer);
 					this.socket?.removeListener("message", onMessage);
 					// Verify the password by sending a no-op command (empty string).
