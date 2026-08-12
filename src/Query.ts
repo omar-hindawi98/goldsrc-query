@@ -6,9 +6,14 @@ export class Query {
 	private readonly udp: UdpSocket;
 	private readonly rcon: RconClient;
 
-	constructor(address: string, port = 27015, timeout = 1500, verbose = false) {
-		this.udp = new UdpSocket(address, port, timeout, verbose);
-		this.rcon = new RconClient(address, port, timeout, verbose);
+	constructor(
+		address: string,
+		port = 27015,
+		timeout = 1500,
+		log?: (msg: string) => void,
+	) {
+		this.udp = new UdpSocket(address, port, timeout, log);
+		this.rcon = new RconClient(address, port, timeout, log);
 	}
 
 	// UDP

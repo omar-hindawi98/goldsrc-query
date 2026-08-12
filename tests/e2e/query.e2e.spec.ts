@@ -1,43 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Query } from "../../src/index";
 
-const HOST = process.env.E2E_HOST ?? "127.0.0.1";
-const PORT = Number(process.env.E2E_PORT ?? 27015);
-const RCON_PASSWORD = process.env.E2E_RCON_PASSWORD ?? "e2e_test_password";
-
-async function waitForServer(
-	host: string,
-	port: number,
-	retries = 60,
-	interval = 5000,
-): Promise<void> {
-	for (let i = 1; i <= retries; i++) {
-		const q = new Query(host, port, 2000);
-		try {
-			q.connect();
-			await q.serverInfo();
-			console.log(`Server ready after attempt ${i}.`);
-			return;
-		} catch {
-			console.log(
-				`Attempt ${i}/${retries} — not ready, retrying in ${interval / 1000}s...`,
-			);
-		} finally {
-			q.close();
-		}
-		await new Promise((r) => setTimeout(r, interval));
-	}
-	throw new Error(
-		`Server at ${host}:${port} did not become ready after ${retries} attempts`,
-	);
-}
-
-describe("goldsrc-query e2e", () => {
+describe("goldsrc-query udp e2e", () => {
 	let query: Query | undefined;
 
-	beforeAll(async () => {
-		await waitForServer(HOST, PORT);
-		query = new Query(HOST, PORT, 5000);
+	beforeAll(() => {
+		query = new Query("127.0.0.1", 27015, 5000);
 		query.connect();
 	});
 
@@ -45,66 +13,66 @@ describe("goldsrc-query e2e", () => {
 		query?.close();
 	});
 
-	it("ping() returns a positive number", async () => {
+	it("ping() returns a non-negative number", async () => {
 		if (!query) return;
 		const ms = await query.ping();
 		expect(ms).toBeGreaterThanOrEqual(0);
 	});
 
-	it("serverInfo() returns expected shape", async () => {
+	it("serverInfo() returns correct server identity", async () => {
 		if (!query) return;
 		const info = await query.serverInfo();
-		expect(info.name).toBeDefined();
-		expect(typeof info.map).toBe("string");
-		expect(info.max_players).toBeGreaterThan(0);
-		expect(info.players).toBeGreaterThanOrEqual(0);
-		expect(["d", "l", "p"]).toContain(info.server_type);
-		expect(["l", "w", "m"]).toContain(info.env);
-	});
-
-	it("serverInfo() map is de_dust2", async () => {
-		if (!query) return;
-		const info = await query.serverInfo();
+		expect(info.name).toBe("Counter-Strike 1.6 E2E Test Server");
 		expect(info.map).toBe("de_dust2");
+		expect(info.folder).toBe("cstrike");
+		expect(info.game).toBe("Counter-Strike");
 	});
 
-	it("players() returns an array", async () => {
+	it("serverInfo() returns correct server configuration", async () => {
+		if (!query) return;
+		const info = await query.serverInfo();
+		expect(info.max_players).toBe(16);
+		expect(info.players).toBeGreaterThanOrEqual(0);
+		expect(info.server_type).toBe("d");
+		expect(info.env).toBe("l");
+	});
+
+	it("players() returns an array of valid player objects", async () => {
 		if (!query) return;
 		const players = await query.players();
 		expect(Array.isArray(players)).toBe(true);
+		// Server runs bots so there are always active players
+		expect(players.length).toBeGreaterThan(0);
+		for (const p of players) {
+			expect(typeof p.index).toBe("number");
+			expect(typeof p.name).toBe("string");
+			expect(typeof p.score).toBe("number");
+			expect(typeof p.duration).toBe("number");
+			expect(p.duration).toBeGreaterThanOrEqual(0);
+		}
 	});
 
-	it("rules() returns a non-empty rule list", async () => {
+	it("rules() returns a non-empty rule list with valid entries", async () => {
 		if (!query) return;
 		const rules = await query.rules();
 		expect(rules.total).toBeGreaterThan(0);
 		expect(rules.list.length).toBe(rules.total);
-		rules.list.forEach((r) => {
+		for (const r of rules.list) {
 			expect(typeof r.name).toBe("string");
+			expect(r.name.length).toBeGreaterThan(0);
 			expect(typeof r.value).toBe("string");
-		});
+		}
 	});
 
-	it("connectRcon() authenticates successfully", async () => {
-		const rconQuery = new Query(HOST, PORT, 5000);
-		await expect(rconQuery.connectRcon(RCON_PASSWORD)).resolves.toBeUndefined();
-		rconQuery.close();
-	});
-
-	it("connectRcon() rejects on wrong password", async () => {
-		const rconQuery = new Query(HOST, PORT, 5000);
-		await expect(rconQuery.connectRcon("wrongpassword")).rejects.toThrow(
-			"RCON authentication failed",
-		);
-		rconQuery.close();
-	});
-
-	it("sendRcon() returns a response for status command", async () => {
-		const rconQuery = new Query(HOST, PORT, 5000);
-		await rconQuery.connectRcon(RCON_PASSWORD);
-		const response = await rconQuery.sendRcon("status");
-		expect(typeof response.data).toBe("string");
-		expect(response.data.length).toBeGreaterThan(0);
-		rconQuery.close();
+	it("rules() reflects server.cfg values", async () => {
+		if (!query) return;
+		const rules = await query.rules();
+		const map = Object.fromEntries(rules.list.map((r) => [r.name, r.value]));
+		expect(map.sv_gravity).toBe("800");
+		expect(map.mp_friendlyfire).toBe("0");
+		expect(map.sv_cheats).toBe("0");
+		expect(map.mp_freezetime).toBe("3");
+		expect(map.mp_roundtime).toBe("4");
+		expect(map.sv_maxspeed).toBe("320");
 	});
 });

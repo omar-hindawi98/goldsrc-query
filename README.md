@@ -6,7 +6,7 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/omar-hindawi98/goldsrc-query/ci.yml?branch=main&label=CI)](https://github.com/omar-hindawi98/goldsrc-query/actions/workflows/ci.yml)
 [![E2E](https://img.shields.io/github/actions/workflow/status/omar-hindawi98/goldsrc-query/e2e.yml?branch=main&label=E2E)](https://github.com/omar-hindawi98/goldsrc-query/actions/workflows/e2e.yml)
 
-A Promise-based Node.js library for querying GoldSrc game servers (Half-Life, Counter-Strike 1.6, etc.) over UDP using the A2S protocol, with full RCON support over TCP.
+A Promise-based Node.js library for querying GoldSrc game servers (Half-Life, Counter-Strike 1.6, etc.) over UDP using the A2S protocol, with full RCON support over UDP.
 
 ---
 
@@ -33,9 +33,8 @@ A Promise-based Node.js library for querying GoldSrc game servers (Half-Life, Co
 - **Player list** — names, scores, and time in-game
 - **Rules** — full server cvar list
 - **Ping** — round-trip latency via A2S_INFO
-- **RCON** — authenticate and send commands over TCP
+- **RCON** — authenticate and send commands over UDP using the GoldSrc RCON protocol
 - **Split-packet reassembly** — handles large responses fragmented across multiple UDP packets
-- **TCP buffering** — correctly handles partial RCON packet delivery and multi-packet responses
 - **TypeScript** — full type declarations included
 
 ---
@@ -95,15 +94,15 @@ query.close();
 ### Constructor
 
 ```typescript
-new Query(address: string, port?: number, timeout?: number, verbose?: boolean)
+new Query(address: string, port?: number, timeout?: number, log?: (msg: string) => void)
 ```
 
-| Parameter | Type      | Default | Description                     |
-| --------- | --------- | ------- | ------------------------------- |
-| `address` | `string`  | —       | Server IP address or hostname   |
-| `port`    | `number`  | `27015` | Server port                     |
-| `timeout` | `number`  | `1500`  | Request timeout in milliseconds |
-| `verbose` | `boolean` | `false` | Log socket activity to stdout   |
+| Parameter | Type                     | Default     | Description                               |
+| --------- | ------------------------ | ----------- | ----------------------------------------- |
+| `address` | `string`                 | —           | Server IP address or hostname             |
+| `port`    | `number`                 | `27015`     | Server port                               |
+| `timeout` | `number`                 | `1500`      | Request timeout in milliseconds           |
+| `log`     | `(msg: string) => void`  | `undefined` | Called with diagnostic messages, e.g. `console.log` |
 
 ---
 
@@ -135,7 +134,7 @@ Returns all server rules (cvars). Reuses the cached challenge from `players()` i
 
 #### `close(): void`
 
-Closes both the UDP socket and the TCP RCON connection.
+Closes both the UDP socket and the RCON socket.
 
 ---
 
@@ -143,7 +142,7 @@ Closes both the UDP socket and the TCP RCON connection.
 
 #### `connectRcon(password: string): Promise<void>`
 
-Opens a TCP connection and authenticates with the given password. Resolves on success, rejects on wrong password or timeout.
+Performs the GoldSrc UDP RCON challenge/response handshake and verifies the password. Resolves on success, rejects on wrong password or timeout.
 
 #### `sendRcon(command: string): Promise<RconMessage>`
 
@@ -156,7 +155,7 @@ Sends an RCON command and returns the full response, including multi-packet resp
 ```
 connect()          → ping() / serverInfo() / players() / rules()
 connectRcon()      → sendRcon()
-close()            → cleans up both UDP and TCP
+close()            → cleans up both UDP and RCON sockets
 ```
 
 A `Query` instance can be reused for multiple queries. Call `close()` when done.
@@ -237,7 +236,7 @@ try {
 try {
     await query.connectRcon('wrongpassword');
 } catch (err) {
-    // err.message: 'RCON authentication failed: wrong password'
+    // err.message: 'RCON authentication failed'
 }
 ```
 
@@ -247,7 +246,7 @@ Common error messages:
 | -------------------------------------------- | -------------------------------------------------------- |
 | `Socket not open — call connect() first`     | Called a query method before `connect()`                 |
 | `Timed out waiting for 0x…`                  | Server did not respond within the timeout                |
-| `RCON authentication failed: wrong password` | Invalid RCON password                                    |
+| `RCON authentication failed` | Invalid RCON password                                    |
 | `RCON authentication timed out`              | Server did not respond to auth within the timeout        |
 | `RCON command timed out: <cmd>`              | Server did not respond to the command within the timeout |
 
