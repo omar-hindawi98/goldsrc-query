@@ -19,7 +19,7 @@ npm run check        # lint + format (auto-fix)
 
 ## E2E tests
 
-E2E tests require Docker and an **x86-64 host** — HLDS does not run under QEMU on Apple Silicon.
+E2E tests require Docker and an **x86-64 host** - HLDS does not run under QEMU on Apple Silicon.
 
 ```bash
 npm run test:e2e
@@ -45,7 +45,7 @@ Commit messages are validated automatically on commit via Husky + commitlint.
 
 ## Pull requests
 
-- Keep PRs focused — one concern per PR
+- Keep PRs focused - one concern per PR
 - Add or update tests for any changed behaviour
 - Make sure `npm run check:ci`, `npm run build`, and `npm test` all pass before opening a PR
 - Fill in the PR template (What / Why / How to test)
