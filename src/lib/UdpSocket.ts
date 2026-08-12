@@ -14,7 +14,7 @@ export class UdpSocket {
 	private readonly address: string;
 	private readonly port: number;
 	private readonly timeout: number;
-	private readonly verbose: boolean;
+	private readonly log?: (msg: string) => void;
 
 	private socket?: dgram.Socket;
 	private challenge: Buffer | null = null;
@@ -27,17 +27,17 @@ export class UdpSocket {
 		address: string,
 		port: number,
 		timeout: number,
-		verbose: boolean,
+		log?: (msg: string) => void,
 	) {
 		this.address = address;
 		this.port = port;
 		this.timeout = timeout;
-		this.verbose = verbose;
+		this.log = log;
 	}
 
 	open(): void {
 		if (this.socket) return;
-		if (this.verbose) console.log("UDP socket created");
+		this.log?.("UDP socket created");
 		this.socket = dgram.createSocket("udp4");
 		this.socket.on("error", (err) => {
 			throw err;
@@ -56,7 +56,7 @@ export class UdpSocket {
 	}
 
 	ping(): Promise<number> {
-		if (this.verbose) console.log("QUERY - PING");
+		this.log?.("QUERY - PING");
 		this.ensureOpen();
 		const latency = new Latency();
 		latency.start();
@@ -71,7 +71,7 @@ export class UdpSocket {
 	}
 
 	serverInfo(): Promise<ServerInfo> {
-		if (this.verbose) console.log("QUERY - SERVER_INFO");
+		this.log?.("QUERY - SERVER_INFO");
 		this.ensureOpen();
 		this.send(UDP_PACKET.A2S_INFO);
 		return this.once<ServerInfo>(
@@ -86,7 +86,7 @@ export class UdpSocket {
 	async players(): Promise<PlayerInfo[]> {
 		this.ensureOpen();
 		const challenge = await this.withChallenge();
-		if (this.verbose) console.log("QUERY - PLAYERS");
+		this.log?.("QUERY - PLAYERS");
 		this.send(UDP_PACKET.A2S_PLAYER, challenge);
 		return this.once<PlayerInfo[]>(UDP_RESPONSE.A2S_PLAYER, (_, data) =>
 			parsePlayers(data),
@@ -96,7 +96,7 @@ export class UdpSocket {
 	async rules(): Promise<RulesInfo> {
 		this.ensureOpen();
 		let challenge = await this.withChallenge();
-		if (this.verbose) console.log("QUERY - RULES");
+		this.log?.("QUERY - RULES");
 		this.send(UDP_PACKET.A2S_RULES, challenge);
 
 		const response = await this.once<{ header: number; data: BufferExt }>(
@@ -110,7 +110,7 @@ export class UdpSocket {
 			challenge = response.data.readLong(true) as Buffer;
 			this.challenge = challenge;
 			this.challengeExpiry = Date.now() + UdpSocket.CHALLENGE_TTL_MS;
-			if (this.verbose) console.log("QUERY - RULES (retry after re-challenge)");
+			this.log?.("QUERY - RULES (retry after re-challenge)");
 			this.send(UDP_PACKET.A2S_RULES, challenge);
 			return this.once<RulesInfo>(UDP_RESPONSE.A2S_RULES, (_, data) =>
 				parseRules(data),
@@ -125,7 +125,7 @@ export class UdpSocket {
 			return this.challenge;
 		}
 
-		if (this.verbose) console.log("QUERY - CHALLENGE");
+		this.log?.("QUERY - CHALLENGE");
 		this.send(UDP_PACKET.A2S_PLAYER_CHALLENGE);
 		this.challenge = await this.once<Buffer>(
 			UDP_RESPONSE.A2S_SERVERQUERY_GETCHALLENGE,

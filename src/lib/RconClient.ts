@@ -9,12 +9,18 @@ import type { RconMessage } from "../types";
 //   4. Recv: \xFF\xFF\xFF\xFF l<text>  (0x6c prefix byte)
 
 const HEADER = Buffer.from([0xff, 0xff, 0xff, 0xff]);
+
+// GoldSrc's command parser uses \" to escape quotes inside a quoted string.
+function escapeQuotes(s: string): string {
+	return s.replace(/"/g, '\\"');
+}
 const RESPONSE_HEADER_LEN = 5; // 4-byte FF prefix + 1-byte type ('l')
 
 export class RconClient {
 	private readonly address: string;
 	private readonly port: number;
 	private readonly timeout: number;
+	private readonly log?: (msg: string) => void;
 
 	private socket?: dgram.Socket;
 	private challenge?: string;
@@ -24,11 +30,12 @@ export class RconClient {
 		address: string,
 		port: number,
 		timeout: number,
-		_verbose: boolean,
+		log?: (msg: string) => void,
 	) {
 		this.address = address;
 		this.port = port;
 		this.timeout = timeout;
+		this.log = log;
 	}
 
 	connect(password: string): Promise<void> {
@@ -49,11 +56,14 @@ export class RconClient {
 				if (text.startsWith("challenge rcon ")) {
 					// Strip null bytes before trimming - GoldSrc null-terminates this string
 					// and JS trim() does not remove \0, so it would corrupt the command.
-					const raw = text.slice("challenge rcon ".length).replace(/\0/g, "").trim();
+					const raw = text
+						.slice("challenge rcon ".length)
+						.replace(/\0/g, "")
+						.trim();
 					this.challenge = raw;
+					this.log?.("RCON - challenge received");
 					clearTimeout(timer);
 					this.socket?.removeListener("message", onMessage);
-					// Verify the password by sending a no-op command (empty string).
 					this.verifyPassword(password).then(resolve).catch(reject);
 					return;
 				}
@@ -111,6 +121,7 @@ export class RconClient {
 				) {
 					reject(new Error("RCON authentication failed"));
 				} else {
+					this.log?.("RCON - authenticated");
 					resolve();
 				}
 			};
@@ -119,7 +130,9 @@ export class RconClient {
 			// Send a benign command that always produces a server response.
 			// An empty command may produce no UDP reply at all; "version" is safe
 			// and reliably returns one packet ending with \n.
-			this.sendRaw(`rcon ${this.challenge} "${password}" version\n`);
+			this.sendRaw(
+				`rcon ${this.challenge} "${escapeQuotes(password)}" version\n`,
+			);
 		});
 	}
 
@@ -153,7 +166,10 @@ export class RconClient {
 			};
 
 			this.socket?.on("message", onMessage);
-			this.sendRaw(`rcon ${challenge} "${password}" ${command}\n`);
+			this.log?.(`RCON - send: ${command}`);
+			this.sendRaw(
+				`rcon ${challenge} "${escapeQuotes(password)}" ${command}\n`,
+			);
 		});
 	}
 

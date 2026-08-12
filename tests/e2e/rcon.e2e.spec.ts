@@ -13,7 +13,9 @@ describe("goldsrc-query rcon e2e", () => {
 	});
 
 	it("connectRcon() authenticates successfully", async () => {
-		await expect(query.connectRcon("e2e_test_password")).resolves.toBeUndefined();
+		await expect(
+			query.connectRcon("e2e_test_password"),
+		).resolves.toBeUndefined();
 	});
 
 	it("connectRcon() rejects on wrong password", async () => {
