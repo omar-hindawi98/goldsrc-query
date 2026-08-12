@@ -95,12 +95,29 @@ export class UdpSocket {
 
 	async rules(): Promise<RulesInfo> {
 		this.ensureOpen();
-		const challenge = await this.withChallenge();
+		let challenge = await this.withChallenge();
 		if (this.verbose) console.log("QUERY - RULES");
 		this.send(UDP_PACKET.A2S_RULES, challenge);
-		return this.once<RulesInfo>(UDP_RESPONSE.A2S_RULES, (_, data) =>
-			parseRules(data),
+
+		const response = await this.once<{ header: number; data: BufferExt }>(
+			[UDP_RESPONSE.A2S_RULES, UDP_RESPONSE.A2S_SERVERQUERY_GETCHALLENGE],
+			(header, data) => ({ header, data }),
 		);
+
+		if (response.header === UDP_RESPONSE.A2S_SERVERQUERY_GETCHALLENGE) {
+			// Server issued a fresh challenge for the rules request — update cache
+			// and retry once.
+			challenge = response.data.readLong(true) as Buffer;
+			this.challenge = challenge;
+			this.challengeExpiry = Date.now() + UdpSocket.CHALLENGE_TTL_MS;
+			if (this.verbose) console.log("QUERY - RULES (retry after re-challenge)");
+			this.send(UDP_PACKET.A2S_RULES, challenge);
+			return this.once<RulesInfo>(UDP_RESPONSE.A2S_RULES, (_, data) =>
+				parseRules(data),
+			);
+		}
+
+		return parseRules(response.data);
 	}
 
 	private async withChallenge(): Promise<Buffer> {

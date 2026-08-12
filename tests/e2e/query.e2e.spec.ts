@@ -5,38 +5,10 @@ const HOST = process.env.E2E_HOST ?? "127.0.0.1";
 const PORT = Number(process.env.E2E_PORT ?? 27015);
 const RCON_PASSWORD = process.env.E2E_RCON_PASSWORD ?? "e2e_test_password";
 
-async function waitForServer(
-	host: string,
-	port: number,
-	retries = 60,
-	interval = 5000,
-): Promise<void> {
-	for (let i = 1; i <= retries; i++) {
-		const q = new Query(host, port, 2000);
-		try {
-			q.connect();
-			await q.serverInfo();
-			console.log(`Server ready after attempt ${i}.`);
-			return;
-		} catch {
-			console.log(
-				`Attempt ${i}/${retries} — not ready, retrying in ${interval / 1000}s...`,
-			);
-		} finally {
-			q.close();
-		}
-		await new Promise((r) => setTimeout(r, interval));
-	}
-	throw new Error(
-		`Server at ${host}:${port} did not become ready after ${retries} attempts`,
-	);
-}
-
 describe("goldsrc-query e2e", () => {
 	let query: Query | undefined;
 
 	beforeAll(async () => {
-		await waitForServer(HOST, PORT);
 		query = new Query(HOST, PORT, 5000);
 		query.connect();
 	});

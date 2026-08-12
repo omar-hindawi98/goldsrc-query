@@ -1,195 +1,161 @@
-import * as net from "node:net";
+import * as dgram from "node:dgram";
 import type { RconMessage } from "../types";
-import { BufferExt } from "./BufferExt";
-import { TCP_PACKET, TCP_RESPONSE } from "./constants";
 
-type PendingRcon = {
-	resolve: (msg: RconMessage) => void;
-	reject: (err: Error) => void;
-	body: string;
-};
+// GoldSrc RCON uses UDP, not TCP.
+// Protocol:
+//   1. Send: \xFF\xFF\xFF\xFF challenge rcon\n
+//   2. Recv: \xFF\xFF\xFF\xFF challenge rcon <number>\n
+//   3. Send: \xFF\xFF\xFF\xFF rcon <number> "<password>" <command>\n
+//   4. Recv: \xFF\xFF\xFF\xFF l<text>  (0x6c prefix byte)
+
+const HEADER = Buffer.from([0xff, 0xff, 0xff, 0xff]);
+const RESPONSE_HEADER_LEN = 5; // 4-byte FF prefix + 1-byte type ('l')
 
 export class RconClient {
 	private readonly address: string;
 	private readonly port: number;
 	private readonly timeout: number;
-	private readonly verbose: boolean;
 
-	private socket?: net.Socket;
-	private idSequence = 0;
-	private pending = new Map<number, PendingRcon>();
-	// Leftover bytes from a partial TCP delivery.
-	private tcpBuffer = Buffer.alloc(0);
+	private socket?: dgram.Socket;
+	private challenge?: string;
+	private password?: string;
 
 	constructor(
 		address: string,
 		port: number,
 		timeout: number,
-		verbose: boolean,
+		_verbose: boolean,
 	) {
 		this.address = address;
 		this.port = port;
 		this.timeout = timeout;
-		this.verbose = verbose;
 	}
 
 	connect(password: string): Promise<void> {
-		this.tcpBuffer = Buffer.alloc(0);
-		this.socket = new net.Socket();
+		this.password = password;
+		this.socket = dgram.createSocket("udp4");
 
 		return new Promise((resolve, reject) => {
-			this.socket?.connect(this.port, this.address, () => {
-				if (this.verbose) console.log("Connected via TCP/IP");
-				this.authenticate(password).then(resolve).catch(reject);
-			});
-			this.socket?.on("error", reject);
-		});
-	}
-
-	send(msg: string): Promise<RconMessage> {
-		return new Promise((resolve, reject) => {
-			const [cmdPacket, id] = this.createPacket(
-				TCP_PACKET.SERVERDATA_EXECCOMMAND,
-				msg,
-			);
-			// Send a second empty EXECCOMMAND with a sentinel ID (id+1).
-			// When we see a RESPONSE_VALUE for the sentinel, we know the real
-			// response is complete — all packets with id have arrived.
-			const [sentinelPacket] = this.createPacket(
-				TCP_PACKET.SERVERDATA_EXECCOMMAND,
-				"",
-			);
-			const sentinelId = id + 1;
-
 			const timer = setTimeout(() => {
-				this.pending.delete(id);
-				this.pending.delete(sentinelId);
-				reject(new Error(`RCON command timed out: ${msg}`));
-			}, this.timeout);
-
-			const done = (response: RconMessage) => {
-				clearTimeout(timer);
-				this.pending.delete(sentinelId);
-				resolve(response);
-			};
-
-			this.pending.set(id, {
-				resolve: done,
-				reject: (err) => {
-					clearTimeout(timer);
-					reject(err);
-				},
-				body: "",
-			});
-
-			// Sentinel entry — signals end-of-response when we receive it.
-			this.pending.set(sentinelId, {
-				resolve: () => {
-					const entry = this.pending.get(id);
-					if (entry) {
-						this.pending.delete(id);
-						entry.resolve({ id, data: entry.body });
-					}
-				},
-				reject: () => {},
-				body: "",
-			});
-
-			this.socket?.write(cmdPacket);
-			this.socket?.write(sentinelPacket);
-		});
-	}
-
-	close(): void {
-		this.tcpBuffer = Buffer.alloc(0);
-		this.socket?.destroy();
-	}
-
-	private authenticate(password: string): Promise<void> {
-		return new Promise((resolve, reject) => {
-			const [packet, id] = this.createPacket(
-				TCP_PACKET.SERVERDATA_AUTH,
-				password,
-			);
-
-			const timer = setTimeout(() => {
+				this.socket?.removeAllListeners();
 				reject(new Error("RCON authentication timed out"));
 			}, this.timeout);
 
-			const onData = (data: Buffer) => {
-				this.tcpBuffer = Buffer.concat([this.tcpBuffer, data]);
+			const onMessage = (msg: Buffer) => {
+				// Challenge response: \xFF\xFF\xFF\xFF challenge rcon <number>\n
+				if (!msg.slice(0, 4).equals(HEADER)) return;
+				const text = msg.slice(4).toString("utf8").trim();
 
-				while (this.tcpBuffer.length >= 4) {
-					const packetSize = this.tcpBuffer.readInt32LE(0);
-					if (this.tcpBuffer.length < 4 + packetSize) break;
-
-					const buf = new BufferExt(this.tcpBuffer.slice(4, 4 + packetSize));
-					this.tcpBuffer = this.tcpBuffer.slice(4 + packetSize);
-
-					const responseId = buf.readLong() as number;
-					const header = buf.readLong() as number;
-
-					// Auth response comes as RESPONSE_VALUE first, then AUTH_RESPONSE.
-					// We only care about the AUTH_RESPONSE packet.
-					if (header !== TCP_RESPONSE.SERVERDATA_AUTH_RESPONSE) continue;
-
+				if (text.startsWith("challenge rcon ")) {
+					this.challenge = text.slice("challenge rcon ".length).trim();
 					clearTimeout(timer);
-					this.socket?.removeListener("data", onData);
-					this.socket?.on("data", (d: Buffer) => this.onData(d));
-
-					if (responseId === -1 || responseId !== id) {
-						reject(new Error("RCON authentication failed: wrong password"));
-					} else {
-						resolve();
-					}
+					this.socket?.removeListener("message", onMessage);
+					// Verify the password by sending a no-op command (empty string).
+					this.verifyPassword(password).then(resolve).catch(reject);
 					return;
 				}
 			};
 
-			this.socket?.on("data", onData);
-			this.socket?.write(packet);
+			this.socket?.on("message", onMessage);
+			this.socket?.on("error", (err) => {
+				clearTimeout(timer);
+				reject(err);
+			});
+
+			this.sendRaw("challenge rcon\n");
 		});
 	}
 
-	private onData(data: Buffer): void {
-		// TCP can deliver partial packets — buffer until we have a complete one.
-		this.tcpBuffer = Buffer.concat([this.tcpBuffer, data]);
-
-		while (this.tcpBuffer.length >= 4) {
-			const packetSize = this.tcpBuffer.readInt32LE(0);
-			if (this.tcpBuffer.length < 4 + packetSize) break; // incomplete packet
-
-			const buf = new BufferExt(this.tcpBuffer.slice(4, 4 + packetSize));
-			this.tcpBuffer = this.tcpBuffer.slice(4 + packetSize);
-
-			const id = buf.readLong() as number;
-			const header = buf.readLong() as number;
-
-			if (header !== TCP_RESPONSE.SERVERDATA_RESPONSE_VALUE) continue;
-
-			const entry = this.pending.get(id);
-			if (!entry) continue;
-
-			// Accumulate body; sentinel will trigger resolution.
-			entry.body += buf.readString();
-			// Trigger the sentinel immediately if this is the sentinel packet.
-			entry.resolve({ id, data: entry.body });
+	send(command: string): Promise<RconMessage> {
+		if (!this.challenge || !this.password) {
+			return Promise.reject(
+				new Error("RCON not connected - call connectRcon() first"),
+			);
 		}
+		return this.execCommand(command, this.challenge, this.password);
 	}
 
-	private createPacket(type: number, text: string): [Buffer, number] {
-		// RCON packet: size(4) + id(4) + type(4) + body + null + empty-string null
-		const packetSize = 4 + 4 + text.length + 1 + 1;
-		const packet = Buffer.allocUnsafe(4 + packetSize);
-		packet.writeUInt32LE(packetSize, 0);
-		packet.writeUInt32LE(this.idSequence, 4);
-		packet.writeUInt32LE(type, 8);
-		packet.write(text, 12, "utf8");
-		packet.writeUInt8(0, 12 + text.length);
-		packet.writeUInt8(0, 12 + text.length + 1);
+	close(): void {
+		this.socket?.close();
+		this.socket = undefined;
+		this.challenge = undefined;
+		this.password = undefined;
+	}
 
-		const id = this.idSequence;
-		this.idSequence = (this.idSequence + 1) & 0x7fffffff;
-		return [packet, id];
+	private verifyPassword(password: string): Promise<void> {
+		return new Promise((resolve, reject) => {
+			if (!this.challenge) {
+				reject(new Error("No RCON challenge available"));
+				return;
+			}
+
+			const timer = setTimeout(() => {
+				this.socket?.removeAllListeners("message");
+				reject(new Error("RCON authentication timed out"));
+			}, this.timeout);
+
+			const onMessage = (msg: Buffer) => {
+				if (!msg.slice(0, 4).equals(HEADER)) return;
+				if (msg[4] !== 0x6c) return; // not an 'l' response packet
+
+				const text = msg.slice(RESPONSE_HEADER_LEN).toString("utf8").trim();
+				clearTimeout(timer);
+				this.socket?.removeListener("message", onMessage);
+
+				if (
+					text.toLowerCase().includes("bad rcon_password") ||
+					text.toLowerCase().includes("bad password")
+				) {
+					reject(new Error("RCON authentication failed"));
+				} else {
+					resolve();
+				}
+			};
+
+			this.socket?.on("message", onMessage);
+			// Send a benign command that always produces a server response.
+			// An empty command may produce no UDP reply at all; "version" is safe
+			// and reliably returns one packet ending with \n.
+			this.sendRaw(`rcon ${this.challenge} "${password}" version\n`);
+		});
+	}
+
+	private execCommand(
+		command: string,
+		challenge: string,
+		password: string,
+	): Promise<RconMessage> {
+		return new Promise((resolve, reject) => {
+			const timer = setTimeout(() => {
+				this.socket?.removeAllListeners("message");
+				reject(new Error(`RCON command timed out: ${command}`));
+			}, this.timeout);
+
+			let accumulated = "";
+
+			const onMessage = (msg: Buffer) => {
+				if (!msg.slice(0, 4).equals(HEADER)) return;
+				if (msg[4] !== 0x6c) return;
+
+				const chunk = msg.slice(RESPONSE_HEADER_LEN).toString("utf8");
+				accumulated += chunk;
+
+				// GoldSrc sends one or more UDP packets per command response.
+				// A trailing \n on the last packet signals end-of-response.
+				if (chunk.endsWith("\n") || chunk.endsWith("\0")) {
+					clearTimeout(timer);
+					this.socket?.removeListener("message", onMessage);
+					resolve({ id: 0, data: accumulated.trim() });
+				}
+			};
+
+			this.socket?.on("message", onMessage);
+			this.sendRaw(`rcon ${challenge} "${password}" ${command}\n`);
+		});
+	}
+
+	private sendRaw(text: string): void {
+		const payload = Buffer.concat([HEADER, Buffer.from(text, "utf8")]);
+		this.socket?.send(payload, this.port, this.address);
 	}
 }
