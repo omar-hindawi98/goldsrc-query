@@ -22,7 +22,6 @@ A Promise-based Node.js library for querying GoldSrc game servers (Half-Life, Co
   - [Lifecycle](#lifecycle)
 - [Types](#types)
 - [Error Handling](#error-handling)
-- [Development](#development)
 
 ---
 
@@ -252,18 +251,3 @@ Common error messages:
 | `RCON authentication timed out`          | Server did not respond to auth within the timeout        |
 | `RCON command timed out: <cmd>`          | Server did not respond to the command within the timeout |
 
----
-
-## Development
-
-```bash
-npm run build        # compile TypeScript to dist/
-npm run dev          # compile in watch mode
-npm test             # run all tests
-npm run test:watch   # run tests in watch mode
-npm run test:e2e     # run e2e tests (requires Docker, x86-64 host only)
-npm run check        # lint + format (auto-fix)
-npm run check:ci     # lint + format check (no writes, runs in CI)
-```
-
-> **Note:** E2E tests require Docker and an x86-64 host - HLDS does not run under QEMU emulation on Apple Silicon. E2E tests run automatically in CI on every push.
