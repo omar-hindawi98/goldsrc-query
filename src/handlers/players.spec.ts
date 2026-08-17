@@ -4,7 +4,7 @@ import {
 	writeFloat,
 	writeLong,
 	writeString,
-} from "../../tests/packetHelpers";
+} from "../../tests/helpers/packetHelpers";
 import { BufferExt } from "../lib/BufferExt";
 import { parsePlayers } from "./players";
 

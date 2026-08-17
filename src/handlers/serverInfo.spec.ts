@@ -5,7 +5,7 @@ import {
 	writeLong,
 	writeShort,
 	writeString,
-} from "../../tests/packetHelpers";
+} from "../../tests/helpers/packetHelpers";
 import { parseServerInfo, parseServerInfoAdditional } from "./serverInfo";
 
 describe("parseServerInfo", () => {
