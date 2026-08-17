@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import {
 	buildPacket,
 	writeBigUInt64LE,
@@ -6,7 +5,7 @@ import {
 	writeLong,
 	writeShort,
 	writeString,
-} from "../../tests/packetHelpers";
+} from "../../tests/helpers/packetHelpers";
 import { parseServerInfo, parseServerInfoAdditional } from "./serverInfo";
 
 describe("parseServerInfo", () => {

@@ -1,5 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { Query } from "../../src/index";
+import { Query } from "../src/index";
 
 describe("goldsrc-query rcon e2e", () => {
 	let query: Query;

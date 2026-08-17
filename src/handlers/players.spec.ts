@@ -1,11 +1,10 @@
-import { describe, expect, it } from "vitest";
 import {
 	buildPacket,
 	writeByte,
 	writeFloat,
 	writeLong,
 	writeString,
-} from "../../tests/packetHelpers";
+} from "../../tests/helpers/packetHelpers";
 import { BufferExt } from "../lib/BufferExt";
 import { parsePlayers } from "./players";
 

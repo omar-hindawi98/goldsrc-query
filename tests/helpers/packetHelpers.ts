@@ -1,4 +1,4 @@
-import { BufferExt } from "../src/lib/BufferExt";
+import { BufferExt } from "../../src/lib/BufferExt";
 
 type Offset = { v: number };
 

@@ -15,9 +15,9 @@
 		"lint": "biome lint --write",
 		"check": "biome check --write",
 		"check:ci": "biome check",
-		"test": "vitest run",
-		"test:watch": "vitest",
-		"test:e2e": "vitest run --config vitest.e2e.config.ts",
+		"test": "vitest run --project unit",
+		"test:watch": "vitest --project unit",
+		"test:e2e": "vitest run --project e2e",
 		"prepublishOnly": "npm run check:ci && npm run build && npm test",
 		"prepare": "husky"
 	},
