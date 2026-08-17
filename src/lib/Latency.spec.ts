@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { Latency } from "./Latency";
 
 describe("Latency", () => {
